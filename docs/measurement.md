@@ -417,7 +417,8 @@ otherwise. The child only reads — a tool allowlist under `--permission-mode do
 with the typecheck, lint and `harness:check` its spec mandates denied, the same for every release. It reads
 only inside the staged project: `Read`, `Grep` and `Glob` are scoped to `./**`, and `--settings` sets
 `blockReadsOutsideWorkingDirectories`, because the answer key (`evals/reviewer/`, and the reports of earlier
-runs) is on the same disk, where a bare `Read` reaches it. It loads
+runs) is on the same disk, where a bare `Read` reaches it. The same settings deny any git command carrying
+`--no-index`, which diffs two paths anywhere on disk, or `--output`, which writes a file wherever it names. It loads
 no user settings, so no global hook snapshots the eval into the owner's statistics, and writes no session.
 It is not hermetic across machines: user-level agents and skills still load. A run that did not review
 (not logged in, out of turns, `claude` missing) is reported as a failure rather than graded as a review

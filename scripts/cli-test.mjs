@@ -4484,6 +4484,29 @@ const dated = (date, status = 'active') =>
     fileTools.join() === 'Read(./**),Grep(./**),Glob(./**)' && onLogin.args.includes('--settings') && fence?.permissions?.blockReadsOutsideWorkingDirectories === true,
     `eval: the reviewer's file tools stay inside the staged project, away from the answer key — granted ${fileTools.join(', ')}, settings ${JSON.stringify(fence)}`,
   );
+  // The git the reviewer may run is a way around that fence: `--no-index` compares two paths anywhere on
+  // disk, and `--output` writes wherever it names, wherever in the command either flag stands. A Bash rule
+  // matches as a prefix (`Bash(git diff:*)`), with `*` for any run of characters, or whole; a deny wins.
+  const ruleList = (flag) => {
+    const from = onLogin.args.indexOf(flag);
+    if (from === -1) return [];
+    const rest = onLogin.args.slice(from + 1);
+    return rest.slice(0, rest.findIndex((a) => a.startsWith('--')) >>> 0);
+  };
+  const bashRules = (rules) => rules.flatMap((r) => (/^Bash\((.*)\)$/.exec(r) ? [/^Bash\((.*)\)$/.exec(r)[1]] : []));
+  const matches = (rule, command) =>
+    new RegExp(`^${rule.replace(/:\*$/, '*').split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`).test(command);
+  const allow = bashRules([...ruleList('--allowedTools'), ...(fence?.permissions?.allow ?? [])]);
+  const deny = bashRules([...ruleList('--disallowedTools'), ...(fence?.permissions?.deny ?? [])]);
+  const runs = (command) => allow.some((r) => matches(r, command)) && !deny.some((r) => matches(r, command));
+  expect(runs('git diff') && runs('git log -p src/server/config.ts'), `eval: the reviewer can still read the diff and the history — allow ${allow.join(', ')}, deny ${deny.join(', ')}`);
+  const outside = [
+    'git diff --no-index ../defects.json src/server/config.ts',
+    'git diff --stat --no-index ../defects.json src/server/config.ts',
+    'git diff --output=../written.txt',
+    'git log -p --output=../written.txt',
+  ].filter(runs);
+  expect(outside.length === 0, `eval: the reviewer cannot read or write outside the staged project through git — it may run: ${outside.join(' | ')}`);
 
   // End to end without a model: the fixture stages, composes, and the canned report is graded.
   const { status, out } = run(['eval', '--release', '0.24.0', '--dry-run', '--keep'], { loud: true });

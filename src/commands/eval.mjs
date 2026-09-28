@@ -51,8 +51,14 @@ const BILLED = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL
  */
 const TOOLS = ['Read(./**)', 'Grep(./**)', 'Glob(./**)', 'Bash(git diff:*)', 'Bash(git status:*)', 'Bash(git show:*)', 'Bash(git log:*)'];
 
-/** The settings the reviewer runs under, beside the project's own: no file read outside its directory. */
-const FENCE = JSON.stringify({ permissions: { blockReadsOutsideWorkingDirectories: true } });
+/**
+ * The settings the reviewer runs under, beside the project's own: no file read outside its directory, and
+ * none of the git it may run reaching past it — `--no-index` diffs any two paths on disk, and `--output`
+ * writes wherever it names. The flags are matched anywhere in the command, since git takes them anywhere.
+ */
+const FENCE = JSON.stringify({
+  permissions: { blockReadsOutsideWorkingDirectories: true, deny: ['Bash(git *--output*)', 'Bash(git *--no-index*)'] },
+});
 
 /**
  * What the staged repository ignores: the harness composed beside the change, so the diff and the status
