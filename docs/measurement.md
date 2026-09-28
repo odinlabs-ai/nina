@@ -414,7 +414,10 @@ It runs `claude -p` as the composed reviewer (`--agent reviewer`) in a throwaway
 login Claude Code already has — a subscription, never a per-token bill: every credential that would bill
 per token (or route it through a gateway) is removed from the child's environment unless `--api` asks
 otherwise. The child only reads — a tool allowlist under `--permission-mode dontAsk`, so the reviewer runs
-with the typecheck, lint and `harness:check` its spec mandates denied, the same for every release — loads
+with the typecheck, lint and `harness:check` its spec mandates denied, the same for every release. It reads
+only inside the staged project: `Read`, `Grep` and `Glob` are scoped to `./**`, and `--settings` sets
+`blockReadsOutsideWorkingDirectories`, because the answer key (`evals/reviewer/`, and the reports of earlier
+runs) is on the same disk, where a bare `Read` reaches it. It loads
 no user settings, so no global hook snapshots the eval into the owner's statistics, and writes no session.
 It is not hermetic across machines: user-level agents and skills still load. A run that did not review
 (not logged in, out of turns, `claude` missing) is reported as a failure rather than graded as a review

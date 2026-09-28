@@ -43,8 +43,16 @@ import { PROJECTS_ROOT } from '../transcripts.mjs';
 /** Credentials that would make `claude -p` bill per token instead of using the login. */
 const BILLED = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL', 'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX', 'CLAUDE_CODE_USE_FOUNDRY'];
 
-/** What the reviewer may do: read the tree and the diff, nothing else. */
-const TOOLS = ['Read', 'Grep', 'Glob', 'Bash(git diff:*)', 'Bash(git status:*)', 'Bash(git show:*)', 'Bash(git log:*)'];
+/**
+ * What the reviewer may do: read the staged tree and the diff, nothing else. A bare `Read` reads any path,
+ * and the answer key is on the same disk — `evals/reviewer/` in the installed package, and the reports of
+ * earlier runs beside the staged project — so each file tool is scoped to the project, and `FENCE` makes
+ * the tools refuse a path outside it whatever the rules say.
+ */
+const TOOLS = ['Read(./**)', 'Grep(./**)', 'Glob(./**)', 'Bash(git diff:*)', 'Bash(git status:*)', 'Bash(git show:*)', 'Bash(git log:*)'];
+
+/** The settings the reviewer runs under, beside the project's own: no file read outside its directory. */
+const FENCE = JSON.stringify({ permissions: { blockReadsOutsideWorkingDirectories: true } });
 
 /**
  * What the staged repository ignores: the harness composed beside the change, so the diff and the status
@@ -459,6 +467,7 @@ export function reviewerCommand({ model, api }) {
     '--no-session-persistence',
     '--setting-sources', 'project',
     '--permission-mode', 'dontAsk',
+    '--settings', FENCE,
     '--allowedTools', ...TOOLS,
     ...(model ? ['--model', model] : []),
   ];

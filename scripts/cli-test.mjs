@@ -4469,6 +4469,21 @@ const dated = (date, status = 'active') =>
   else process.env.ANTHROPIC_API_KEY = saved;
   expect(!('ANTHROPIC_API_KEY' in onLogin.env) && onApi.env.ANTHROPIC_API_KEY === 'sk-test', 'eval: an API key reaches the child only under --api');
   expect(onLogin.args.includes('dontAsk') && onLogin.args.includes('--no-session-persistence') && onLogin.args.join(' ').includes('--setting-sources project'), 'eval: the child reads only, loads no user settings, and writes no session');
+  // The answer key is a file on the same disk: defects.json and the sample report in the installed
+  // package, and the reports of earlier runs kept beside the staged project. A bare `Read`, `Grep` or
+  // `Glob` reaches any path, so a reviewer that went looking would be graded on what it read there.
+  const granted = onLogin.args.slice(onLogin.args.indexOf('--allowedTools') + 1);
+  const fileTools = granted.slice(0, granted.findIndex((a) => a.startsWith('--')) >>> 0).filter((t) => /^(Read|Grep|Glob)\b/.test(t));
+  let fence = null;
+  try {
+    fence = JSON.parse(onLogin.args[onLogin.args.indexOf('--settings') + 1]);
+  } catch {
+    // Reported below.
+  }
+  expect(
+    fileTools.join() === 'Read(./**),Grep(./**),Glob(./**)' && onLogin.args.includes('--settings') && fence?.permissions?.blockReadsOutsideWorkingDirectories === true,
+    `eval: the reviewer's file tools stay inside the staged project, away from the answer key — granted ${fileTools.join(', ')}, settings ${JSON.stringify(fence)}`,
+  );
 
   // End to end without a model: the fixture stages, composes, and the canned report is graded.
   const { status, out } = run(['eval', '--release', '0.24.0', '--dry-run', '--keep'], { loud: true });
