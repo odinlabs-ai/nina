@@ -112,6 +112,12 @@ async function main() {
     console.error(`  unknown command "${name}" — see \`nina help\`.\n`);
     return 2;
   }
+  // No command reads --help, so it used to run the command: `nina init --help` initialised the
+  // working directory and wrote its package.json.
+  if (argv.includes('--help') || argv.includes('-h')) {
+    help();
+    return 0;
+  }
   return command.run(argv, { root: ROOT });
 }
 

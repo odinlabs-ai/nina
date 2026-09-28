@@ -175,6 +175,18 @@ expect(
   );
 }
 
+// ─── help: asked for after a command, it is help, and the command does not run ──────────
+{
+  const dir = await scratch();
+  await writeFile(join(dir, 'package.json'), '{"name":"asked","private":true}\n');
+  for (const flag of ['--help', '-h']) {
+    const { status, out } = run(['init', '--project', dir, flag], { loud: true });
+    expect(status === 0 && out.includes('usage: nina <command>'), `help: \`nina init ${flag}\` prints the usage — got ${status}\n${out}`);
+  }
+  expect(!existsSync(join(dir, '.nina')), 'help: `nina init --help` initialises nothing');
+  expect((await readFile(join(dir, 'package.json'), 'utf8')) === '{"name":"asked","private":true}\n', 'help: `nina init --help` leaves package.json as it was');
+}
+
 // ─── init: a surface the core offers but nobody wrote a question for ────────────────────
 {
   const source = await readFile(join(ROOT, 'src', 'commands', 'init.mjs'), 'utf8');
